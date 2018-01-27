@@ -2,26 +2,29 @@
 Chemical File Convert
 Convert output and input file of Gaussian 09 program
  - originally written by: Thien-Phuc Tu-Nguyen
- - current version: 0.2
- - last update: September 2017
+ - current version: 0.3
+ - last update: January 2018
  - by: Thien-Phuc Tu-Nguyen
- - tested on: Anaconda3 4.4
+ - tested on: Anaconda3 5.0
 All right reserved
 '''
-
+import numpy as np # To assist the conversion
 
 class Gaussian09:
-    
-    def __init__(self,energy_search_str = ''):
+
+    def __init__(self,energy_search_str = None):
         # Run attributes:
         self.run_dict = {}
         # Energy search
-        self.energy_search_str = energy_search_str
+        if energy_search_str == None:
+            self.energy_search_str = ''
+        else:
+            self.energy_search_str = energy_search_str
         # Molecule information
         self.struct_dict = {}
         # Properties information
         self.prop_dict = {}
-        
+
     def read_input(self,file_name):
         f = open(file_name,'r')
         line = f.readline()
@@ -67,7 +70,7 @@ class Gaussian09:
             self.run_dict['add_info'] += line
             line = f.readline()
         f.close()
-    
+
     def read_output(self,file_name):
         f = open(file_name,'r')
         finish_tag = False
@@ -163,7 +166,20 @@ class Gaussian09:
                 self.prop_dict['enthalpy_sum'] = float(temp[46:])
                 temp = f.readline()
                 self.prop_dict['gibbs_sum'] = float(temp[46:])
-                temp = f.readline()                 
+                temp = f.readline()
+            if temp.find('Forces (Hartrees/Bohr)') != -1:
+                self.prop_dict['Fx'] = []
+                self.prop_dict['Fy'] = []
+                self.prop_dict['Fz'] = []
+                temp = f.readline()
+                temp = f.readline()
+                temp = f.readline()
+                while temp.find('---') == -1:
+                    temp = temp.split()
+                    self.prop_dict['Fx'] += [float(temp[2])]
+                    self.prop_dict['Fy'] += [float(temp[3])]
+                    self.prop_dict['Fz'] += [float(temp[4])]
+                    temp = f.readline()
             if temp.find(' 1\\1\\') != -1 or temp.find(' 1|1|') != -1:
                 sep = temp[2]
                 next_line = f.readline()
@@ -201,7 +217,7 @@ class Gaussian09:
                         self.struct_dict['y'] += [float(temp[3])]
                         self.struct_dict['z'] += [float(temp[4])]
         f.close()
-    
+
     def write_input(self,file_name):
         f = open(file_name,'w')
         if 'processor' in self.run_dict.keys():
@@ -225,7 +241,7 @@ class Gaussian09:
         if 'add_info' in self.run_dict.keys():
             f.write(self.add_info)
         f.close()
-        
+
     def write_xyz(self,file_name):
         f = open(file_name,'w')
         f.write(self.run_dict['title'] + '\n')
@@ -233,3 +249,15 @@ class Gaussian09:
         for i in range(len(self.struct_dict['atom'])):
             f.write('{:2s} {:14.8f} {:14.8f} {:14.8f}\n'.format(self.struct_dict['atom'][i],self.struct_dict['x'][i],self.struct_dict['y'][i],self.struct_dict['z'][i]))
         f.close()
+
+    def to_coordinate(self):
+        if 'x' in self.struct_dict.keys():
+            return np.array([self.struct_dict['x'], self.struct_dict['y'], self.struct_dict['z']], dtype = np.float64).transpose()
+        else:
+            raise RuntimeError('The file does not contain coordinate information')
+
+    def to_force(self):
+        if 'Fx' in self.prop_dict.keys():
+            return np.array([self.prop_dict['Fx'], self.prop_dict['Fy'], self.prop_dict['Fz']]).transpose()
+        else:
+            raise RuntimeError('The file does not contain force information')
