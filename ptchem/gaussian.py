@@ -114,9 +114,11 @@ class Gaussian09:
                 self.prop_dict['wave'] += [float(temp.split()[6])]
                 self.prop_dict['os'] += [float(temp.split()[8][2:])]
                 temp = f.readline()
-            if temp.find('SCF Done:  E('+self.energy_search_str+')') != -1:
-                value = temp[(temp.find('=')+1):-1]
-                self.prop_dict['energy'] = float(value.split()[0])
+            if temp.find('E('+self.energy_search_str+')') != -1:
+                pos = temp.find('E('+self.energy_search_str+')') + len('E('+self.energy_search_str+')')
+                value = temp[pos:]
+                value = value[(value.find('=')+1):-1]
+                self.prop_dict['energy'] = float(value.split()[0].replace('D','E'))
                 temp = f.readline()
             if temp.find(' Frequencies --') != -1:
                 if 'freq' not in self.prop_dict.keys():
@@ -243,10 +245,12 @@ class Gaussian09:
         f.close()
 
     def write_xyz(self,file_name):
+        n = len(self.struct_dict['atom'])
         f = open(file_name,'w')
+        f.write(str(n) + '\n')
         f.write(self.run_dict['title'] + '\n')
         f.write('\n')
-        for i in range(len(self.struct_dict['atom'])):
+        for i in range(n):
             f.write('{:2s} {:14.8f} {:14.8f} {:14.8f}\n'.format(self.struct_dict['atom'][i],self.struct_dict['x'][i],self.struct_dict['y'][i],self.struct_dict['z'][i]))
         f.close()
 
