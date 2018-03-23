@@ -249,7 +249,6 @@ class Gaussian09:
         f = open(file_name,'w')
         f.write(str(n) + '\n')
         f.write(self.run_dict['title'] + '\n')
-        f.write('\n')
         for i in range(n):
             f.write('{:2s} {:14.8f} {:14.8f} {:14.8f}\n'.format(self.struct_dict['atom'][i],self.struct_dict['x'][i],self.struct_dict['y'][i],self.struct_dict['z'][i]))
         f.close()
